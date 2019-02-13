@@ -10,7 +10,7 @@ import folium
 
 def cluster(df, n_clusters, model):
 	""" Cluster the bike stations using K-means based on the location.
-	Two models are used: K-means and Agglomerative Hierarchical Clustering
+	Two models are used: K-means and Agglomerative Hierarchical Clustering.
 
 	Parameters
 	----------
@@ -31,18 +31,15 @@ def cluster(df, n_clusters, model):
 		kmeans = KMeans(n_clusters=n_clusters)
 
 		# fit kmeans to the location of bike stations
-		kmeans.fit(df.loc[:,["longitude","latitude"]])
-
-		centroids = kmeans.cluster_centers_
+		kmeans.fit(df.loc[:, ["longitude","latitude"]])
 		labels = kmeans.labels_
-
 	else:
 		hc = AgglomerativeClustering(n_clusters=n_clusters, affinity = 'euclidean', linkage = 'ward')
-		labels = hc.fit_predict(df.loc[:,["longitude","latitude"]])
+		labels = hc.fit_predict(df.loc[:, ["longitude", "latitude"]])
 
 	return labels
 
-def map(df, labels, hex_colors):
+def map(df, labels, hex_colors, city):
 	""" Creates an interactive map of the city of Brisbane with the labeled bike stations.
 
 	Parameters
@@ -53,6 +50,8 @@ def map(df, labels, hex_colors):
 		labels of the bike stations
 	hex_colors: list
 		The color representing each cluster
+	city: list of flaot
+		lattitude and longitude of the city.
 	
 	Returns
 	-------
@@ -60,9 +59,9 @@ def map(df, labels, hex_colors):
 		folium map of city of Brisbane.
 	"""
 	
-	folium_map = folium.Map(location=[-27.470125, 153.021072], zoom_start=13,tiles='Stamen Toner')
+	folium_map = folium.Map(location=city, zoom_start=13, tiles='Stamen Toner')
 	for station in range(df.shape[0]):
-		folium.Circle(location=df.loc[station,["latitude","longitude"]], fill=True, radius=50, color=hex_colors[labels[station]]).add_child(folium.Popup(df.loc[station,"name"])).add_to(folium_map)
+		folium.Circle(location=df.loc[station, ["latitude", "longitude"]], fill=True, radius=50, color=hex_colors[labels[station]]).add_child(folium.Popup(df.loc[station, "name"])).add_to(folium_map)
 	return folium_map
 
 def plot_clusters(df, labels, colors, output):
@@ -72,26 +71,23 @@ def plot_clusters(df, labels, colors, output):
 	----------
 	df: dataframe
 		Bike stations data.
-	labels: list
+	labels: list of int
 		labels of the bike stations
-	centroids: list
-		centroids of the clusters
-	hex_colors: list
+	hex_colors: list of colors
 		The color representing each cluster
 	output: str
-		path where figure is saved.
+		location to save figure to.
 	"""
 
-	plt.scatter(df.loc[:,"longitude"],df.loc[:,"latitude"], color=[colors[l_] for l_ in labels], label=labels)
-	#plt.scatter(centroids[:, 0],centroids[:, 1], color=[c for c in colors[:len(centroids)]], marker = "x", s=150, linewidths = 5, zorder = 10)
+	plt.scatter(df.loc[:, "longitude"],df.loc[:, "latitude"], color=[colors[l_] for l_ in labels], label=labels)
 	plt.axis('off')
 	if output != 'skip':
 		plt.savefig(output + 'bike_stations')
 	plt.show()
 
 
-def main(n_clusters, model, plot, output, input_file):
-	""" Main function that trains and plots the figuers.
+def main(n_clusters, model, plot, output, input_file, city):
+	""" Main function that trains, plots the figuers and saves new file.
 
 	Parameters
 	----------
@@ -102,7 +98,11 @@ def main(n_clusters, model, plot, output, input_file):
 	plot: str
 		Method of displaying the results.
 	output: str
-		path where figure is saved.	
+		location to figure figure to.	
+	input_file: str
+		location of the bike stations json file.
+	city: list of float
+		lattitude and longitude of the city.
 	"""
 	df = pd.read_json(input_file)
 
@@ -116,27 +116,32 @@ def main(n_clusters, model, plot, output, input_file):
 			file = 'map.html'
 		else:
 			file = output + 'map.html'
-		map(df, labels, hex_colors).save(file)
+		map(df, labels, hex_colors, city).save(file)
 		webbrowser.open(file)
 	else:
 		plot_clusters(df, labels, colors, output)
+
+	if output != "skip":
+		df['label'] = labels
+		df.to_json(output + "labeld_bike_stations.json")
 
 
 
 
 if __name__ == "__main__":
 
-	parser = argparse.ArgumentParser(description='A program for clustering the bike stations in Brisbane using their location. \
+	parser = argparse.ArgumentParser(description='A script for clustering bike stations in a using their location. \
 	 First, the model is trained using either K-means or Agglomerative Hierarchical Clustering \
-	 for a user choosen number of cluster. And second, the clsuters are displayed in using an intertactive html map or matplotlib standard figure. \
+	 for a user choosen number of cluster. And second, the clusters are displayed using an intertactive html map or matplotlib standard figure. \
 	 The intertactive map need to be saved on the computer in order to be displayed and requires the package folium. The standard figure can also be \
-	 saved by pasing a path using the command lien options.')
-	parser.add_argument("-n", "--n_clusters", type=int, default=4, help='Number of clusters.')
-	parser.add_argument("-l", "--plot", type=str, default="figure", choices=['map', 'figure'], help="Method of desplaying cluters: \
+	 saved by pasing a path using the command lien options. Finaly, new json file is saved with labeled stations. Data can be found in JCdecaux open data.')
+	parser.add_argument("-n", "--n_clusters", type=int, default=4, help='number of clusters.')
+	parser.add_argument("-l", "--plot", type=str, default="figure", choices=['map', 'figure'], help="method of desplaying cluters: \
 		- map: interractive html map. - figrue: standard figrue.")
-	parser.add_argument("-m", "--model", type=str, default="knn", choices=['kmeans', 'ahc'], help="Model used for clustering the bike stations.")
-	parser.add_argument('-p', '--path', type=str, default='skip', help="Path where the figure need to be saved.")
-	parser.add_argument('-i', '--file_path', type=str, help='the path of data file in json.', required=True)
+	parser.add_argument("-m", "--model", type=str, default="knn", choices=['kmeans', 'ahc'], help="model used for clustering the bike stations.")
+	parser.add_argument('-p', '--path', type=str, default='skip', help="path where the figure need to be saved.")
+	parser.add_argument('-i', '--file_path', type=str, help='path of the json data file.', required=True)
+	parser.add_argument('-c', '--city', type=float, nargs=2, default=[-27.470125, 153.021072], help='lattitude and longitude corrdinates of the city')
 
 	args = vars(parser.parse_args())
 
@@ -145,5 +150,6 @@ if __name__ == "__main__":
 	model = args["model"]
 	output = args['path']
 	input_file = args['file_path']
+	city = args['city']
 
-	main(n_clusters, model, plot, output, input_file)
+	main(n_clusters, model, plot, output, input_file,city)
