@@ -41,7 +41,7 @@ python bike_stations.py -n 5 -l map -i ./data/Brisbane_CityBike.json -m kmeans
 
 ```
 
-![Brisbane-Map](./images/brisbane-5-clusters.png)
+![Brisbane-Map](./images/brisbane-5-clusters.PNG)
 
 ### Brisbane city map clustering (standard figure)
 
@@ -61,4 +61,4 @@ python bike_stations.py -n 5 -l map -i ./data/Lyon.json -m kmeans -c 45.74846 4.
 
 ```
 
-![Lyon-Map](./images/lyon-5-clusters.png)
+![Lyon-Map](./images/lyon-5-clusters.PNG)
